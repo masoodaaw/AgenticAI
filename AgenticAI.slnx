@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AgenticAI.Backend.Tests/AgenticAI.Backend.Tests.csproj" />
+  <Project Path="AgenticAI.Backend/AgenticAI.Backend.csproj" />
+  <Project Path="AgenticAI.UI/AgenticAI.UI.csproj" />
+</Solution>

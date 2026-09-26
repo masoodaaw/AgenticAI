@@ -1,0 +1,6 @@
+@AgenticAI.Backend_HostAddress = http://localhost:5138
+
+GET {{AgenticAI.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
