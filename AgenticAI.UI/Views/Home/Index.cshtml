@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "AgenticAI Console";
+}
+
+<h2>AgenticAI Console</h2>
+<p>Backend: <code id="backendUrl">@ViewData["BackendBaseUrl"]</code></p>
+
+<div class="mb-3">
+    <label class="form-label">User ID</label>
+    <input id="userId" class="form-control" value="demo-user" />
+</div>
+<div class="mb-3">
+    <label class="form-label">Prompt</label>
+    <textarea id="prompt" class="form-control" rows="3">Summarize the latest decision context</textarea>
+</div>
+<div class="form-check mb-3">
+    <input id="highRisk" class="form-check-input" type="checkbox" />
+    <label class="form-check-label" for="highRisk">High-risk tool call (requires approval)</label>
+</div>
+<button id="runBtn" class="btn btn-primary">Run Orchestration</button>
+
+<div class="mt-4">
+    <h4>Result</h4>
+    <pre id="resultBox">No result yet.</pre>
+</div>
+
+<div class="mt-4">
+    <h4>Token/Latency Dashboard</h4>
+    <pre id="dashboardBox">Loading...</pre>
+</div>
+
+@section Scripts {
+    <script>
+        const baseUrl = document.getElementById("backendUrl").innerText.trim();
+        const resultBox = document.getElementById("resultBox");
+        const dashboardBox = document.getElementById("dashboardBox");
+
+        async function refreshDashboard() {
+            const response = await fetch(`${baseUrl}/api/metrics/dashboard`);
+            dashboardBox.innerText = JSON.stringify(await response.json(), null, 2);
+        }
+
+        document.getElementById("runBtn").addEventListener("click", async () => {
+            const payload = {
+                userId: document.getElementById("userId").value,
+                message: document.getElementById("prompt").value,
+                highRisk: document.getElementById("highRisk").checked,
+                requestedTool: document.getElementById("highRisk").checked ? "db.query" : "status.ping"
+            };
+
+            const response = await fetch(`${baseUrl}/api/agent/execute`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Role": "admin" },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+            resultBox.innerText = JSON.stringify(result, null, 2);
+
+            if (result.approvalId) {
+                const approve = confirm(`Approve high-risk action ${result.approvalId}?`);
+                const approvalResponse = await fetch(`${baseUrl}/api/agent/approvals/${result.approvalId}/approve`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reviewer: "ui-operator", approved: approve, notes: "UI approval flow" })
+                });
+                const approvalResult = await approvalResponse.json();
+                resultBox.innerText = JSON.stringify(approvalResult, null, 2);
+            }
+
+            await refreshDashboard();
+        });
+
+        refreshDashboard();
+        setInterval(refreshDashboard, 5000);
+    </script>
+}
